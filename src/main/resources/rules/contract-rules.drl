@@ -1,0 +1,125 @@
+package rules;
+
+import com.legalvalidator.model.Issue;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+global java.util.List issues;
+
+dialect "mvel"
+
+// Rule 1: Check for Confidentiality Clause
+rule "Missing Confidentiality Clause"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(confidential|non[-]?disclosure|NDA).*"))
+    then
+        // Since it's missing, we set position to 0, 0
+        issues.add(new Issue("MISSING_CLAUSE", "HIGH", 
+            "Confidentiality or Non-Disclosure Clause (NDA) is missing",
+            "Add: 'The parties agree to keep all confidential information confidential for a period of 5 years.'", 0, 0));
+end
+
+// Rule 2: Check for Excessive Penalty (Dynamic Highlighting)
+rule "Excessive Penalty Clause"
+    when
+        $text: String()
+        eval($text.matches("(?i).*penalty.*(25|[3-9][0-9]|100)[\\s]*%.*"))
+    then
+        int start = $text.toLowerCase().indexOf("penalty");
+        int end = start + 20; // Highlighting a small window around the issue
+        issues.add(new Issue("RISK_CLAUSE", "CRITICAL", 
+            "Penalty rate exceeds 25% - This may be legally unenforceable",
+            "Consider reducing the penalty rate to a reasonable range of 10-15%.", start, end));
+end
+
+// Rule 3: Check Termination Clause
+rule "Missing Termination Clause"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(termination|cancel|terminate).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "HIGH", 
+            "Termination or cancellation terms are not specified",
+            "Add a termination clause allowing either party to cancel with a 30-day written notice.", 0, 0));
+end
+
+// Rule 4: Check Force Majeure
+rule "Missing Force Majeure"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(force majeure|act of god|unforeseen events).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "MEDIUM", 
+            "Force Majeure clause is missing from the document",
+            "Add a clause covering natural disasters, war, strikes, or other unforeseen events.", 0, 0));
+end
+
+// Rule 5: Check Dispute Resolution
+rule "Missing Dispute Resolution"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(dispute|arbitration|mediation).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "HIGH", 
+            "Dispute resolution mechanism is not mentioned",
+            "Include a dispute resolution clause, specifying arbitration or mediation.", 0, 0));
+end
+
+// Rule 6: Check Governing Law
+rule "Missing Governing Law"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(governing law|jurisdiction|applicable law).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "CRITICAL", 
+            "Governing law and legal jurisdiction are not specified",
+            "Specify which laws apply (e.g., Laws of Bangladesh) and which courts have jurisdiction.", 0, 0));
+end
+
+// Rule 7: Check for Unreasonable Liability (Dynamic Highlighting)
+rule "Unreasonable Liability Mention"
+    when
+        $text: String()
+        eval($text.matches("(?i).*(unlimited).*(liability).*"))
+    then
+        int start = $text.toLowerCase().indexOf("unlimited");
+        int end = $text.toLowerCase().indexOf("liability") + "liability".length();
+        issues.add(new Issue("RISK_CLAUSE", "HIGH", 
+            "Unlimited liability mention found - This poses high financial risk",
+            "Add a 'Limitation of Liability' clause with a reasonable financial cap.", start, end));
+end
+
+// Rule 8: Check Warranty Clause
+rule "Missing Warranty Clause"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(warranty|guarantee).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "MEDIUM", 
+            "Warranty or Guarantee terms are missing",
+            "Add a warranty clause covering the quality of products or services.", 0, 0));
+end
+
+// Rule 9: Check Delivery Terms
+rule "Missing Delivery Terms"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(delivery|shipping|shipment).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "MEDIUM", 
+            "Delivery or shipping terms are not specified",
+            "Clearly define the delivery timeline, location, and the process for acceptance.", 0, 0));
+end
+
+// Rule 10: Check Payment Terms
+rule "Unclear Payment Terms"
+    when
+        $text: String()
+        eval(!$text.matches("(?i).*(payment|paid|due|invoice).*"))
+    then
+        issues.add(new Issue("MISSING_CLAUSE", "HIGH", 
+            "Payment terms are unclear or missing",
+            "Specify payment amounts, due dates, late fees, and preferred payment methods.", 0, 0));
+end
